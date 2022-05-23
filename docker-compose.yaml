@@ -1,0 +1,36 @@
+version: '3'
+
+services:
+  redis:
+    image: redis
+    networks:
+      - database
+  
+  socket:
+    build:
+      context: ./socketServer
+      dockerfile: Dockerfile
+    environment:
+      - REDIS_HOST=redis
+      - DEBUG=socketServer
+    networks:
+      - database
+    scale: 3
+    depends_on:
+      - redis
+  
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    ports:
+      - '4000:3000'
+    environment:
+      - REDIS_HOST=redis
+    networks:
+      - database
+    depends_on:
+      - redis
+
+networks:
+  database:

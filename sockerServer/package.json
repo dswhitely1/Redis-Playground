@@ -1,0 +1,16 @@
+{
+  "name": "socketserver",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Donald Whitely <dswhitely0@gmail.com> (https://www.donwhitely.com/)",
+  "license": "MIT",
+  "dependencies": {
+    "debug": "^4.3.4",
+    "ioredis": "^5.0.5"
+  }
+}
