@@ -1,6 +1,59 @@
 version: '3'
 
 services:
+  zookeeper-1:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - ZOOKEEPER_TICK_TIME=2000
+    ports:
+      - "22181:2181"
+    networks:
+      - database
+  
+  zookeeper-2:
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - ZOOKEEPER_TICK_TIME=2000
+    ports:
+      - "32181:2181"
+    networks:
+      - database
+
+  kafka-1:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper-1
+      - zookeeper-2
+    ports:
+      - "29092:29092"
+    environment:
+      - KAFKA_BROKER_ID=1
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper-1:2181,zookeeper-2:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka-1:9092,PLAINTEXT_HOST://localhost:29092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+    networks:
+      - database
+
+  kafka-2:
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - zookeeper-1
+      - zookeeper-2
+    ports:
+      - "39092:39092"
+    environment:
+      - KAFKA_BROKER_ID=2
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper-1:2181,zookeeper-2:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka-2:9092,PLAINTEXT_HOST://localhost:39092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=PLAINTEXT
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+    networks:
+      - database
   redis:
     image: redis
     networks:
@@ -13,11 +66,14 @@ services:
     environment:
       - REDIS_HOST=redis
       - DEBUG=socketServer
+      - KAFKA_HOST=kafka-1:9092,kafka-2:9092
     networks:
       - database
     scale: 3
     depends_on:
       - redis
+      - kafka-1
+      - kafka-2
   
   server:
     build:
@@ -27,10 +83,29 @@ services:
       - '4000:3000'
     environment:
       - REDIS_HOST=redis
+      - KAFKA_HOST=kafka-1:9092,kafka-2:9092
     networks:
       - database
     depends_on:
       - redis
+      - kafka-1
+      - kafka-2
+      - socket
+      - comm
+  
+  comm:
+    build:
+      context: ./commProcess
+      dockerfile: Dockerfile
+    environment:
+      - DEBUG=commProcess
+      - KAFKA_HOST=kafka-1:9092,kafka-2:9092
+    networks:
+      - database
+    scale: 2
+    depends_on:
+      - kafka-1
+      - kafka-2
 
 networks:
   database:
